@@ -6,6 +6,10 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <ncurses.h>
+#include <math.h>
+#include "!si.h"
+
+#define MAX_BOMBS 1000
 
 
 
@@ -23,27 +27,51 @@ void printInstructions(int maxy, int maxx);
 void printTank();
 void printAliens();
 void printBarriers();
-
+int checkForQuit(int c);
 void finish(int sig);
-double tankPositionX;
-double tankPositionY;
+int tankPositionX;
+int tankPositionY;
+int alienPositionX;
+int alienPositionY;
+int alienPositionX2;
+int alienPositionY2;
+int alienPositionX3;
+int alienPositionY3;
+int alienPositionX4;
+int alienPositionY4;
 double tankVelocityX;
-double tankVelocityY;
 double tankVelocityChange;
-
+int tankOldPositionX;
+int alienOldPositionX;
+int alienOldPositionX2;
+int alienOldPositionX3;
+int alienOldPositionX4;
+void moveTank(char c, int maxx);
+void moveAlien(char c, int maxx);
+void menu(struct options *settings);
 
 /*----------------------------------------------
                 MAIN FUNCTION
 ------------------------------------------------*/
 int main(int argc, char *argv[]){
 
+  
+
     //Initialize Variables
-    int ch;
-    int tank = 1;
-    int die = 0;
+    
+    //int input;
     int maxx, maxy; //maxx and maxy size of terminal
-    tankPositionX = maxx - 70 ;
-    tankPositionY = maxy - 2;
+    tankPositionX = 2;
+    tankPositionY = 22;
+    alienPositionX = 10;
+    alienPositionY = 3;
+    alienPositionX2 = 20;
+    alienPositionY2 = 3;
+    alienPositionX3 = 30;
+    alienPositionY3 = 3;
+    alienPositionX4 = 40;
+    alienPositionY4 = 3;
+    int ch;
     //Start Curses
     initialize();
     getmaxyx(stdscr, maxy, maxx);      // get current screen size 
@@ -56,52 +84,30 @@ int main(int argc, char *argv[]){
        printInstructions(maxy, maxx);
        erase();
 
-     //Start Loop  
+	char in = '\0';
 
-	  //print tank
-	  //printTank();
-	
-	wclear( stdscr );
-	wmove( stdscr, 22, 10);
-	waddstr( stdscr, (char*)"/-^-\\");
-	
-	wmove( stdscr, 15, 45);
-	waddstr( stdscr, (char*)"\\ooo/");
-	//wmove( stdscr, 22, 12);
-	//waddch( stdscr, '?');
-	wrefresh( stdscr ); 
-	
+	while(in != 'q'){
 
-ch = wgetch( stdscr );
-switch(ch)
-{
-   case KEY_LEFT:
-	tankPositionX --;
-   break;
+          //print tank
+          printTank();
 
-   case KEY_RIGHT:
-	tankPositionX ++;
-   break;
-			
-}	
+       //move tank
+          moveTank(in, maxx);
 
      //print aliens 
      printAliens();
-     
+	moveAlien(in, maxx);
+   
+
      //print barriers
      printBarriers();
-     erase();
-    char in;
-     scanf("%c", &in);
 
- 
+     in = getch();
 
-      //print menu screen 
+ }
 
-      //if '1' , show score board 
-
-      //else if '2' , play the game
-
+   
+      
       
       //End Curses
       finish(0);
@@ -118,16 +124,20 @@ switch(ch)
 
 void initialize(){
  //terminal graphics
+ 
+ intrflush( stdscr, FALSE );
  (void) initscr(); //initializes the curses library
  start_color();
- (void) keypad(stdscr, TRUE); //enable keyboard mapping
- nonl(); //tells curses not to do NL-> CR/NL on output
+ keypad(stdscr, TRUE); //enable keyboard mapping
+ (void) nonl(); //tells curses not to do NL-> CR/NL on output
  (void) cbreak(); //take input chars one at a time
  (void) noecho(); //dont echo input
+ nodelay(stdscr, TRUE);
  init_pair(1, COLOR_BLUE, COLOR_BLACK);
  init_pair(2, COLOR_RED, COLOR_RED); 
  init_pair(3, COLOR_GREEN , COLOR_GREEN);
  init_pair(4, COLOR_BLUE, COLOR_BLUE);
+ init_pair(5, COLOR_BLACK, COLOR_BLACK);
  //initialize game global variables
  
 
@@ -147,7 +157,9 @@ void initialize(){
  //double alienPositionY = ;
 }
 
-
+int checkForQuit(int c){
+return (c == 'q' || c == 'Q');
+}
 
 
 void makeEraseString(char buf[], int len){
@@ -157,6 +169,8 @@ void makeEraseString(char buf[], int len){
   buf[len] = '\0';
   return;
 }
+
+
 
 void printBarriers(){
 
@@ -269,6 +283,7 @@ void printBarriers(){
  mvaddch(17,72, '#');
 
  refresh(); //refresh screen
+ 
  attroff(COLOR_PAIR(1)); // go back to default colors
 
 
@@ -285,29 +300,115 @@ void printWelcomeScreen(int maxy, int maxx){
   mvprintw(maxy/4+15, maxx/2 - 15, "press any key to continue...");
   refresh(); //refresh screen
   attroff(COLOR_PAIR(1)); // go back to default colors
-  //sleep(1); // sleep for a second by calling the linux/unix sleep library call
+  //sleep(2); // sleep for a second by calling the linux/unix sleep library call
   char in;
   scanf("%c", &in);	
   return;
 }
 
+void moveTank(char c, int maxx){
+
+switch(c)
+ {
+        case '6':
+        tankOldPositionX = tankPositionX;
+        tankPositionX +=2;
+        erase;
+     break;
+        case '4':
+        tankOldPositionX = tankPositionX;
+        tankPositionX -=2;
+        erase;
+     break;
+ }
+
+}
+
+
+
+void moveAlien(char c, int maxx)
+{
+	switch(c)
+ {
+        case '6':
+        alienOldPositionX = alienPositionX;
+        alienPositionX +=2;
+        erase;
+     break;
+        case '4':
+        alienOldPositionX = alienPositionX;
+        alienPositionX -=2;
+        erase;
+     break;
+ }
+	
+}
+
 
 void printTank(){
  attron(COLOR_PAIR(3));
- mvaddch(22,2, 'x');
- mvaddch(22,3, 'x');
- mvaddch(22,4, 'x');
+ mvaddch(tankPositionY, tankPositionX, 'x');
+ mvaddch(tankPositionY,tankPositionX + 1, 'x');
+ mvaddch(tankPositionY,tankPositionX +2, 'x');
+
+ attron(COLOR_PAIR(5));
+ mvaddch(tankPositionY, tankOldPositionX, 'x');
+ mvaddch(tankPositionY,tankOldPositionX + 1, 'x');
+ mvaddch(tankPositionY,tankOldPositionX +2, 'x');
+
  refresh(); //refresh screen
 
 }
 
 
+
+
+
 void printAliens(){
  
  //set alien color
- attron(COLOR_PAIR(2));
+ //attron(COLOR_PAIR(2));
  //column one
- mvaddch(12,22, 'x');
+attron(COLOR_PAIR(2));
+ mvaddch(alienPositionY, alienPositionX, 'x');
+ mvaddch(alienPositionY,alienPositionX + 1, 'x');
+ mvaddch(alienPositionY,alienPositionX +2, 'x');
+
+ attron(COLOR_PAIR(5));
+ mvaddch(alienPositionY, alienOldPositionX, 'x');
+ mvaddch(alienPositionY,alienOldPositionX + 1, 'x');
+ mvaddch(alienPositionY,alienOldPositionX +2, 'x');
+
+/*attron(COLOR_PAIR(2));
+ mvaddch(alienPositionY2, alienPositionX2, 'x');
+ mvaddch(alienPositionY2,alienPositionX2 + 1, 'x');
+ mvaddch(alienPositionY2,alienPositionX2 +2, 'x');
+
+ attron(COLOR_PAIR(5));
+ mvaddch(alienPositionY2, alienOldPositionX2, 'x');
+ mvaddch(alienPositionY2,alienOldPositionX2 + 1, 'x');
+ mvaddch(alienPositionY2,alienOldPositionX2 +2, 'x');
+
+attron(COLOR_PAIR(2));
+ mvaddch(alienPositionY3, alienPositionX3, 'x');
+ mvaddch(alienPositionY3,alienPositionX3 + 1, 'x');
+ mvaddch(alienPositionY3,alienPositionX3 +2, 'x');
+
+ attron(COLOR_PAIR(5));
+ mvaddch(alienPositionY3, alienOldPositionX3, 'x');
+ mvaddch(alienPositionY3,alienOldPositionX3 + 1, 'x');
+ mvaddch(alienPositionY3,alienOldPositionX3 +2, 'x');
+
+attron(COLOR_PAIR(2));
+ mvaddch(alienPositionY4, alienPositionX4, 'x');
+ mvaddch(alienPositionY4,alienPositionX4 + 1, 'x');
+ mvaddch(alienPositionY4,alienPositionX4 +2, 'x');
+
+ attron(COLOR_PAIR(5));
+ mvaddch(alienPositionY4, alienOldPositionX4, 'x');
+ mvaddch(alienPositionY4,alienOldPositionX4 + 1, 'x');
+ mvaddch(alienPositionY4,alienOldPositionX4 +2, 'x');*/
+ /*mvaddch(12,22, 'x');
  mvaddch(9,22, 'a');
  mvaddch(6,22, 'v');
  mvaddch(3,22, 'k');
@@ -381,7 +482,7 @@ void printAliens(){
  mvaddch(9,56, 'a');
  mvaddch(6,56, 'v');
  mvaddch(3,56, 'k');
-
+*/
  return;
 }
 
@@ -393,13 +494,13 @@ void printInstructions(int maxy, int maxx){
  attron(COLOR_PAIR(1));  //change color
  mvprintw(maxy/4, maxx/2 - 10, "INSTRUCTIONS"); // print instructions, approximately middle of screen
  mvprintw(maxy/4+1, maxx/2 - 10, "------------"); 
- mvprintw(maxy/4+3, maxx/2 - 15, "Move: Arrows(Left/Right)");
- mvprintw(maxy/4+4, maxx/2 - 15, "Shoot: Spacebar");
+ mvprintw(maxy/4+3, maxx/2 - 25, "Move: Number Pad on Right of Keyboard(4(LEFT)/6(RIGHT))");
+ mvprintw(maxy/4+4, maxx/2 - 10, "Shoot: Spacebar");
  mvprintw(maxy/4+15, maxx/2 - 15, "press any key to continue...");
  
  refresh(); //refresh screen
  attroff(COLOR_PAIR(1)); // go back to default colors
- //sleep(1); // sleep for a second by calling the linux/unix sleep library call
+ //sleep(3); // sleep for a second by calling the linux/unix sleep library call
  char in;
  scanf("%c", &in);
  return;
@@ -418,6 +519,18 @@ void finish(int sig)
     return;//    exit(0);
 }
 
+void menu(struct options *settings) {
+   char option, buf[30];
+   
+
+   clear();
+   echo();
+   nocbreak();
+   nodelay(stdscr,0);
+
+   
+   
+   }
 
 
 
