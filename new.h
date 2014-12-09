@@ -24,11 +24,10 @@ int alienVelocity;
 };
 struct barrier
 {
-int barrierXpos;
-int barrierYpos;
+int barrierXpos[18];
+int barrierYpos[3];
 char barrierCharacter;
 bool barrierLife;
-int barrierXposOld;
 };
 struct bullet
 {
@@ -52,10 +51,14 @@ void makeEraseString(char buf[], int len);
 void printWelcomeScreen(int maxy, int maxx);
 void printInstructions(int maxy, int maxx, char name[]);
 void shootBullet(int xPos, int yPos, int timer);
+void alienBullets();
 void printTank();
 void printBullet();
 void printAliens();
 void printBarriers();
+void barrierCoordinates();
+bool collisionDetection(int yPos, int xPos);
+bool barrierCollisionDetection(int yPos, int xPos);
 int playGame(char c,int maxx, int &timer, int &actual);
 void updateTime( int ctr, int &time);
 int uploadData(int scoreArr[], char playerArr[][60]);
@@ -65,16 +68,10 @@ void displayScores(char playerArr[][60], int scoreArr[], int &size, int maxx, in
 double tankVelocityX;
 double tankVelocityChange;
 alien moveAliens[39];
-barrier setBarrier[60];
+int barrierArray[90][90];
+int alienBulletArray[79][24];
 void shiftAliens(int timer);
 void delay();
-bool collisionDetection(int yPos, int xPos); 
-bool barrierCollisionDetection(int yPos, int xPos);
-void printBarrier();
-
-
-
-/* Functions */
 void initialize(){
 //terminal graphics
 (void) initscr(); //initializes the curses library
@@ -138,27 +135,7 @@ moveAliens[i].alienCharacter = 'k';
 moveAliens[i].alienLife = true;
 moveAliens[i].alienVelocity = 1;
 }
-/*for (int i = 0; i < 3; i++)
-{
-setBarrier[i].barrierXpos = (i*2);
-setBarrier[i].barrierYpos = 17;
-setBarrier[i].barrierCharacter = '#';
-setBarrier[i].barrierLife = true;
-}
-for (int i = 3; i <7; i++)
-{
-setBarrier[i].barrierXpos = (i*2);
-setBarrier[i].barrierYpos = 18;
-setBarrier[i].barrierCharacter = '#';
-setBarrier[i].barrierLife = true;
-}
-for (int i = 7; i < 13; i++)
-{
-setBarrier[i].barrierXpos = (i*2);
-setBarrier[i].barrierYpos = 19;
-setBarrier[i].barrierCharacter = '#';
-setBarrier[i].barrierLife = true;
-}*/
+
 }
 void makeEraseString(char buf[], int len){
 for(int i = 0; i < len; i++){
@@ -167,7 +144,6 @@ buf[i] = ' ';
 buf[len] = '\0';
 return;
 }
-
 void printBarriers(){
 //set barrier color
 attron(COLOR_PAIR(4));
@@ -264,6 +240,8 @@ mvaddch(17,71, '#');
 mvaddch(17,72, '#');
 refresh(); //refresh screen
 attroff(COLOR_PAIR(1)); // go back to default colors
+
+barrierCoordinates();
 return;
 }
 
@@ -297,12 +275,11 @@ refresh(); //refresh screen
 
 int playGame(char c, int maxx, int &timer, int &actual){
 bool noCollision = true;
-mvprintw(25, 67, "Time: ");
+//mvprintw(25, 64, "Time: ");
 c = getch();
 do{
 //print barriers
 printBarriers();
-//printBarrier();
 //print tank
 printTank();
 //print aliens
@@ -352,10 +329,11 @@ return actual;
 }
 
 void updateTime( int ctr, int &time){
-if(ctr%1000==0){
+if(ctr%3000==0){
 time++;
 }
 attron(COLOR_PAIR(7));
+mvprintw(25, 64, "Time: ");
 mvprintw(25, 73, "%i",time); 
 refresh();
 }
@@ -367,17 +345,17 @@ xPos += 1;
 move(yPos, xPos);
 attron(COLOR_PAIR(6));
 mvaddch(yPos,xPos,'x');
-while(yPos != 0 && !collisionDetection(yPos, xPos) ){
-tankOldPositionY = yPos;
-yPos--;
-attron(COLOR_PAIR(5));
-mvaddch(tankOldPositionY,xPos, 'x');
-attron(COLOR_PAIR(6));
-mvaddch(yPos,xPos,'x');
-usleep(8000);
-refresh(); 
+while(yPos != 0 && !collisionDetection(yPos,xPos) && !barrierCollisionDetection(yPos, xPos)){
+	tankOldPositionY = yPos;
+	yPos--;
+	attron(COLOR_PAIR(5));
+	mvaddch(tankOldPositionY,xPos, 'x');
+	attron(COLOR_PAIR(6));
+	mvaddch(yPos,xPos,'x');
+	usleep(20000);
+	//refresh();
+	shiftAliens(timer);
 }
-shiftAliens(timer);
 attron(COLOR_PAIR(5));
 mvaddch(yPos,xPos, 'x');
 refresh(); 
@@ -388,6 +366,7 @@ void printAliens(){
 attron(COLOR_PAIR(2));
 for(int i=0; i<39; i++)
 {
+
 if (moveAliens[i].alienLife == true)
 {
 mvaddch(moveAliens[i].alienYpos, moveAliens[i].alienXpos, moveAliens[i].alienCharacter);
@@ -405,30 +384,62 @@ refresh();
 return;
 }
 
-void printBarrier(){
-//set alien color
-attron(COLOR_PAIR(3));
-for(int i=0; i<39; i++)
-{
-if (setBarrier[i].barrierLife == true)
-{
-mvaddch(setBarrier[i].barrierYpos, setBarrier[i].barrierXpos, setBarrier[i].barrierCharacter);
-}
-}
+bool collisionDetection(int yPos, int xPos){
 attron(COLOR_PAIR(5));
+
 for(int i=0; i<39; i++)
 {
-if (setBarrier[i].barrierLife == true)
-{
-mvaddch(setBarrier[i].barrierYpos, setBarrier[i].barrierXposOld, setBarrier[i].barrierCharacter);
-}
-}
-refresh();
-return;
+
+	if(moveAliens[i].alienYpos == yPos && moveAliens[i].alienXpos == xPos)
+	{
+	mvaddch(moveAliens[i].alienYpos, moveAliens[i].alienXposOld, moveAliens[i].alienCharacter);
+	moveAliens[i].alienLife = false;
+	return true;
+	}
+	if(i == 39){
+         return true;
+        }
+	
 }
 
+refresh();
+return false;
+
+
+} 
+
+bool barrierCollisionDetection(int yPos, int xPos){
+attron(COLOR_PAIR(5));
+if(barrierArray[yPos][xPos]==1)
+{
+	mvaddch(yPos,xPos, '#');
+	refresh();
+	return true;
+}
+return false;
+}
+
+void alienBullets()
+{
+int shoot;
+srand(time (NULL));
+
+shoot = rand()%12;			
+for(int i=0; i<39; i++)
+{
+shootBullet (moveAliens[i].alienXpos, moveAliens[i].alienYpos, shoot);
+}
+	
+	
+	// every tick of clock move existing bullets down
+	// collision detection for tank
+		// if collision lose a life
+
+}
+
+
 void shiftAliens(int timer){
-if(timer%200 == 0){ 
+if(timer%400 == 0){ 
 for(int i = 0; i<39; i++)
 {
 moveAliens[i].alienXposOld = moveAliens[i].alienXpos;
@@ -446,21 +457,8 @@ moveAliens[i].alienVelocity = 1;
 }
 }
 
-bool collisionDetection(int yPos, int xPos){
-attron(COLOR_PAIR(5));
-for(int i=0; i<39; i++)
-{
-	if(moveAliens[i].alienYpos == yPos && moveAliens[i].alienXpos == xPos)
-	{
-	mvaddch(moveAliens[i].alienYpos, moveAliens[i].alienXposOld, moveAliens[i].alienCharacter);
-	moveAliens[i].alienLife = false;
-	return true;
-	}}
-refresh();
-return false;
-} 
-
 void printInstructions(int maxy, int maxx, char name[]){
+
 erase(); // clear screen
 attron(COLOR_PAIR(1)); //change color
 mvprintw(maxy/4, maxx/2 - 10, "INSTRUCTIONS"); // print instructions, approximately middle of screen
@@ -539,7 +537,7 @@ while(index<size){
 move(ypos, maxx/2 - 20 );
 mvprintw(ypos, maxx/2 - 20 , playerArr[index]);
 mvprintw(ypos, maxx/2 - 10 , "%i", scoreArr[index]);
-ypos++;
+ypos--;
 index++;
 mvprintw(22, 45, "Press q to return to main menu.");
 
@@ -548,13 +546,96 @@ input = getch();
 }
 }
 
+void barrierCoordinates(){
+barrierArray[19][5]= 1;
+barrierArray[19][6]= 1;
+barrierArray[19][7]= 1;
+barrierArray[19][8]= 1;
+barrierArray[19][9]= 1;
+barrierArray[19][10]= 1;
+barrierArray[19][11]= 1;
+barrierArray[19][12]= 1;
+barrierArray[19][20]= 1;
+barrierArray[19][21]= 1;
+barrierArray[19][22]= 1;
+barrierArray[19][23]= 1;
+barrierArray[19][24]= 1;
+barrierArray[19][25]= 1;
+barrierArray[19][26]= 1;
+barrierArray[19][27]= 1;
+barrierArray[19][36]= 1;
+barrierArray[19][37]= 1;
+barrierArray[19][38]= 1;
+barrierArray[19][39]= 1;
+barrierArray[19][40]= 1;
+barrierArray[19][41]= 1;
+barrierArray[19][42]= 1;
+barrierArray[19][43]= 1;
+barrierArray[19][51]= 1;
+barrierArray[19][52]= 1;
+barrierArray[19][53]= 1;
+barrierArray[19][54]= 1;
+barrierArray[19][55]= 1;
+barrierArray[19][56]= 1;
+barrierArray[19][57]= 1;
+barrierArray[19][58]= 1;
+barrierArray[19][67]= 1;
+barrierArray[19][68]= 1;
+barrierArray[19][69]= 1;
+barrierArray[19][70]= 1;
+barrierArray[19][71]= 1;
+barrierArray[19][72]= 1;
+barrierArray[19][73]= 1;
+barrierArray[19][74]= 1;
+barrierArray[18][6]= 1;
+barrierArray[18][7]= 1;
+barrierArray[18][8]= 1;
+barrierArray[18][9]= 1;
+barrierArray[18][10]= 1;
+barrierArray[18][11]= 1;
+barrierArray[18][21]= 1;
+barrierArray[18][22]= 1;
+barrierArray[18][23]= 1;
+barrierArray[18][24]= 1;
+barrierArray[18][25]= 1;
+barrierArray[18][26]= 1;
+barrierArray[18][37]= 1;
+barrierArray[18][38]= 1;
+barrierArray[18][39]= 1;
+barrierArray[18][40]= 1;
+barrierArray[18][41]= 1;
+barrierArray[18][42]= 1;
+barrierArray[18][52]= 1;
+barrierArray[18][53]= 1;
+barrierArray[18][54]= 1;
+barrierArray[18][55]= 1;
+barrierArray[18][56]= 1;
+barrierArray[18][57]= 1;
+barrierArray[18][68]= 1;
+barrierArray[18][69]= 1;
+barrierArray[18][70]= 1;
+barrierArray[18][71]= 1;
+barrierArray[18][72]= 1;
+barrierArray[18][73]= 1;
+barrierArray[17][7]= 1;
+barrierArray[17][8]= 1;
+barrierArray[17][9]= 1;
+barrierArray[17][10]= 1;
+barrierArray[17][22]= 1;
+barrierArray[17][23]= 1;
+barrierArray[17][24]= 1;
+barrierArray[17][25]= 1;
+barrierArray[17][38]= 1;
+barrierArray[17][39]= 1;
+barrierArray[17][40]= 1;
+barrierArray[17][41]= 1;
+barrierArray[17][53]= 1;
+barrierArray[17][54]= 1;
+barrierArray[17][55]= 1;
+barrierArray[17][56]= 1;
+barrierArray[17][69]= 1;
+barrierArray[17][70]= 1;
+barrierArray[17][71]= 1;
+barrierArray[17][72]= 1;
 
-
-
-
-
-
-
-
-
-
+}
